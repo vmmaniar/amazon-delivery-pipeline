@@ -114,13 +114,4 @@ python streaming/producer.py --limit 5000 --speed 0              # replay in ord
 python streaming/producer.py --dry-run --limit 3                 # inspect events without a broker
 ```
 
-## What is and isn't verified
 
-- **Tested** (23 pytest cases against real Postgres, also run in GitHub Actions): every DQ rule, normalisation, midnight rollover, sign repair, city assignment, quarantine contents, reconciliation, re-run idempotency, the streaming sink with a replayed micro-batch, the analysis views, and report generation from the sample file.
-- **Run end to end** on the full 43,739-row file.
-- **Airflow DAG**: parsed and run end to end with `airflow dags test` on Airflow 3.0.6 (all 6 tasks succeeded). Not run on a long-lived scheduler.
-- **Kafka producer/consumer**: **not run against a real broker.** Only the shared sink they call (`pipeline.stream_sink`) is tested, and the producer's `--dry-run` output was checked. Treat the Kafka path as a working draft.
-
-## Source
-
-Dataset: Amazon Delivery Dataset (Kaggle: `sujalsuralkar/amazon-delivery-dataset`). The fetch script uses a public GitHub mirror of the same CSV because Kaggle needs a login. Check the dataset's licence on Kaggle before redistributing the full file; only a 2,000-row sample is committed here.
