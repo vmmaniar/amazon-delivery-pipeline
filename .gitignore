@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Full dataset is ~6 MB; fetch it with scripts/fetch_data.sh. A 2,000-row sample is committed.
+data/raw/amazon_delivery.csv
+.env
