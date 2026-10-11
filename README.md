@@ -13,7 +13,7 @@ CSV -> raw.amazon_delivery -> staging.trip_clean -> core (star schema) -> marts 
                                       +-> ops.dq_result              (failure count per rule per batch)
 ```
 
-Everything runs in Postgres SQL; Python just loads the file and runs the SQL files in order. An Airflow DAG runs it daily, and there is an optional Kafka replay.
+Everything runs in Postgres SQL; Python just loads the file and runs the SQL files in order. An Airflow DAG runs it daily.
 
 ## Result on the full file
 
@@ -64,21 +64,11 @@ docker compose up -d postgres      # or set DATABASE_URL to any Postgres
 ./scripts/fetch_data.sh            # full CSV; a 2,000-row sample is in data/sample/
 make run                           # load, clean, check, build star schema and marts
 make report                        # charts + docs/FINDINGS.md
-make test
 ```
 
-`DATABASE_URL` defaults to `postgresql://dev:dev@localhost:5432/delivery`. Single steps: `python -m pipeline.run {init|load|stage|dq|core|marts|reconcile|all}` with `PYTHONPATH=src`.
+`DATABASE_URL` defaults to `postgresql://dev:dev@localhost:5432/delivery`. Single steps: `python -m pipeline.run {init|load|stage|dq|core|marts|reconcile}` with `PYTHONPATH=src`.
 
-**Airflow:** `docker compose --profile airflow up -d` (UI on :8080). The `delivery_pipeline` DAG runs init, load, stage, dq, core, marts and reconcile, and fails if more than 15% of a batch is quarantined.
-
-**Kafka replay:** `docker compose --profile streaming up -d`, then run `streaming/consumer.py` and `streaming/producer.py`. The consumer lands micro-batches in `raw` and runs the same stage/dq/core SQL, so streaming and batch share one set of rules.
-
-## Testing status
-
-- 23 pytest tests against real Postgres (also run in GitHub Actions): each DQ rule, normalisation, midnight rollover, sign repair, quarantine contents, re-runs, the streaming sink, the marts and the report.
-- Ran end to end on the full 43,739 rows.
-- The Airflow DAG ran with `airflow dags test` on Airflow 3.0.6.
-- The Kafka producer and consumer have not been run against a real broker; only the sink they call is tested.
+**Airflow:** `airflow/dags/delivery_pipeline.py` runs the same steps as tasks (init, load, stage, dq, core, marts, reconcile) and fails if more than 15% of a batch is quarantined. Needs Airflow 3 installed and `DATABASE_URL` set; I ran it with `airflow dags test` on 3.0.6.
 
 ## Data
 

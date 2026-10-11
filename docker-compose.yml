@@ -1,6 +1,3 @@
-# docker compose up -d postgres          -> database only (enough for the batch pipeline)
-# docker compose --profile airflow up -d -> adds Airflow (UI on :8080)
-# docker compose --profile streaming up -d -> adds a single-node Kafka (Redpanda) on :9092
 services:
   postgres:
     image: postgres:16
@@ -10,42 +7,6 @@ services:
       POSTGRES_DB: delivery
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev -d delivery"]
-      interval: 5s
-      retries: 10
-
-  airflow:
-    profiles: ["airflow"]
-    image: apache/airflow:3.0.6
-    depends_on:
-      postgres: {condition: service_healthy}
-    environment:
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/project/airflow/dags
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://dev:dev@postgres:5432/airflow_meta
-      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
-      DATABASE_URL: postgresql://dev:dev@postgres:5432/delivery
-      _PIP_ADDITIONAL_REQUIREMENTS: "psycopg[binary]>=3.1"
-    volumes: [".:/opt/project"]
-    ports: ["8080:8080"]
-    command: >
-      bash -c "python - <<'PY'
-      import psycopg2
-      c = psycopg2.connect('postgresql://dev:dev@postgres:5432/delivery'); c.autocommit = True
-      try: c.cursor().execute('CREATE DATABASE airflow_meta')
-      except Exception: pass
-      PY
-      airflow db migrate && airflow standalone"
-
-  redpanda:
-    profiles: ["streaming"]
-    image: redpandadata/redpanda:v24.2.7
-    command: >
-      redpanda start --overprovisioned --smp 1 --memory 512M --reserve-memory 0M
-      --node-id 0 --check=false
-      --kafka-addr PLAINTEXT://0.0.0.0:9092 --advertise-kafka-addr PLAINTEXT://localhost:9092
-    ports: ["9092:9092"]
 
 volumes:
   pgdata:
